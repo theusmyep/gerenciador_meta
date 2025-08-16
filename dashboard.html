@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Investimentos</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        :root { --background-color: #121212; --surface-color: #1e1e1e; --primary-text-color: #e0e0e0; --secondary-text-color: #a0a0a0; --border-color: #333; --accent-color: #007bff; --hover-color: #333; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--background-color); color: var(--primary-text-color); margin: 0; padding: 20px; font-size: 14px; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: var(--surface-color); border-radius: 8px; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+        header, .credentials, footer { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .credentials { display: flex; flex-direction: column; gap: 10px; }
+        .credentials div { display: flex; flex-direction: column; text-align: left; }
+        h1 { margin: 0; font-size: 24px; }
+        p { margin: 5px 0 0; color: var(--secondary-text-color); }
+        input, textarea { width: 100%; padding: 10px; background-color: #2c2c2c; border: 1px solid var(--border-color); border-radius: 5px; color: var(--primary-text-color); font-family: 'Courier New', monospace; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 16px; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #555; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #252525; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        tbody tr:hover { background-color: var(--hover-color); }
+        td:not(:first-child) { text-align: right; font-family: 'Courier New', Courier, monospace; }
+        tfoot td { font-weight: 700; background-color: #252525; }
+        .loader { text-align: center; padding: 50px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dashboard de Investimentos</h1>
+        </header>
+
+        <div class="credentials">
+            <div>
+                <label for="bmId">Business Manager ID</label>
+                <input type="text" id="bmId" placeholder="Cole o ID da Business Manager aqui">
+            </div>
+            <div>
+                <label for="accessToken">Token de Acesso (com permissão ads_read)</label>
+                <textarea id="accessToken" rows="4" placeholder="Cole seu Token de Acesso aqui"></textarea>
+            </div>
+            <button id="load-report-btn">Carregar Relatório</button>
+        </div>
+
+        <main id="report-container">
+            <div id="loader" class="loader hidden">
+                <p>Carregando dados...</p>
+            </div>
+            <table id="report-table" class="hidden">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+            </table>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bmIdInput = document.getElementById('bmId');
+            const accessTokenInput = document.getElementById('accessToken');
+            const loadBtn = document.getElementById('load-report-btn');
+            const loader = document.getElementById('loader');
+            const table = document.getElementById('report-table');
+            const tableHead = table.querySelector('thead');
+            const tableBody = table.querySelector('tbody');
+            const tableFoot = table.querySelector('tfoot');
+
+            const API_VERSION = 'v20.0';
+            const BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
+
+            const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            const getAggregatedReport = async (bmId, token, datePreset) => {
+                const url = `${BASE_URL}/${bmId}/insights`;
+                const params = new URLSearchParams({
+                    access_token: token,
+                    level: 'business',
+                    fields: 'spend,ad_account_id',
+                    breakdowns: 'ad_account',
+                    date_preset: datePreset,
+                    limit: 500,
+                });
+                const response = await fetch(`${url}?${params}`);
+                if (!response.ok) throw new Error(`Erro na API para o período ${datePreset}`);
+                const data = await response.json();
+                return data.data || [];
+            };
+
+            const fetchAndRender = async () => {
+                const bmId = bmIdInput.value.trim();
+                const token = accessTokenInput.value.trim();
+                if (!bmId || !token) {
+                    alert('Por favor, preencha o ID da Business Manager e o Token de Acesso.');
+                    return;
+                }
+
+                loader.classList.remove('hidden');
+                table.classList.add('hidden');
+                loadBtn.disabled = true;
+
+                try {
+                    const accountsUrl = `${BASE_URL}/${bmId}/client_ad_accounts`;
+                    const accountsParams = new URLSearchParams({ access_token: token, fields: 'id,name', limit: 500 });
+                    const accountsResponse = await fetch(`${accountsUrl}?${accountsParams}`);
+                    const accountsData = await accountsResponse.json();
+                    const adAccountsMap = new Map(accountsData.data.map(acc => [acc.id, acc.name]));
+
+                    const periods = [
+                        { preset: 'today', label: 'Hoje' },
+                        { preset: 'yesterday', label: 'Ontem' },
+                        { preset: 'last_7d', label: 'Últimos 7 dias' },
+                        { preset: 'last_30d', label: 'Últimos 30 dias' },
+                    ];
+
+                    const reportPromises = periods.map(p => getAggregatedReport(bmId, token, p.preset));
+                    const results = await Promise.all(reportPromises);
+
+                    const combinedData = new Map();
+                    results.forEach((periodResult, periodIndex) => {
+                        const periodPreset = periods[periodIndex].preset;
+                        periodResult.forEach(item => {
+                            const accountId = `act_${item.ad_account_id}`;
+                            if (!combinedData.has(accountId)) {
+                                combinedData.set(accountId, { id: accountId, name: adAccountsMap.get(accountId) || `Conta ${item.ad_account_id}` });
+                            }
+                            combinedData.get(accountId)[periodPreset] = parseFloat(item.spend);
+                        });
+                    });
+
+                    const reportData = Array.from(combinedData.values());
+                    reportData.forEach(acc => periods.forEach(p => { if (!acc[p.preset]) acc[p.preset] = 0; }));
+                    reportData.sort((a, b) => b.last_30d - a.last_30d);
+
+                    // Render Table
+                    tableHead.innerHTML = '';
+                    tableBody.innerHTML = '';
+                    tableFoot.innerHTML = '';
+                    const headerRow = document.createElement('tr');
+                    headerRow.innerHTML = '<th>Conta de Anúncio</th>';
+                    periods.forEach(p => headerRow.innerHTML += `<th>${p.label}</th>`);
+                    tableHead.appendChild(headerRow);
+
+                    reportData.forEach(acc => {
+                        const row = document.createElement('tr');
+                        let rowHTML = `<td>${acc.name}</td>`;
+                        periods.forEach(p => rowHTML += `<td>${formatCurrency(acc[p.preset])}</td>`);
+                        row.innerHTML = rowHTML;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    const footerRow = document.createElement('tr');
+                    let footerHTML = '<td><strong>Total</strong></td>';
+                    periods.forEach(p => {
+                        const total = reportData.reduce((sum, acc) => sum + acc[p.preset], 0);
+                        footerHTML += `<td><strong>${formatCurrency(total)}</strong></td>`;
+                    });
+                    footerRow.innerHTML = footerHTML;
+                    tableFoot.appendChild(footerRow);
+
+                    table.classList.remove('hidden');
+                } catch (error) {
+                    alert(`Falha ao carregar dados: ${error.message}`);
+                } finally {
+                    loader.classList.add('hidden');
+                    loadBtn.disabled = false;
+                }
+            };
+
+            loadBtn.addEventListener('click', fetchAndRender);
+        });
+    </script>
+</body>
+</html>

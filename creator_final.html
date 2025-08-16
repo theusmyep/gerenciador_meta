@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criador de Anúncios Final</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="creator.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Criador de Anúncios</h1>
+            <p>Conta: Lidere Seu Projeto</p>
+        </header>
+        <main>
+            <form id="ad-creator-form">
+                <input type="hidden" name="accountId" value="348456320153271">
+                <div class="form-step">
+                    <label for="campaign-select">1. Selecione a Campanha</label>
+                    <select id="campaign-select" name="campaignId" required></select>
+                </div>
+                <div class="form-step">
+                    <label for="ad-name">2. Nome do Anúncio</label>
+                    <input type="text" id="ad-name" name="adName" required placeholder="Ex: Anúncio Teste Imagem 01">
+                </div>
+                <div class="form-step">
+                    <label for="creative-file">3. Criativo (Imagem ou Vídeo)</label>
+                    <input type="file" id="creative-file" name="creativeFile" required accept="image/*,video/*">
+                </div>
+                <div class="form-step">
+                    <label for="headline">4. Título (Headline)</label>
+                    <input type="text" id="headline" name="headline" placeholder="Opcional">
+                </div>
+                <div class="form-step">
+                    <label for="primary-text">5. Texto Principal</label>
+                    <textarea id="primary-text" name="primaryText" rows="3" placeholder="Opcional"></textarea>
+                </div>
+                <div class="form-step">
+                    <label for="url">6. URL de Destino</label>
+                    <input type="url" id="url" name="url" required placeholder="https://...">
+                </div>
+                <div class="form-step">
+                    <label for="cta">7. Call to Action (CTA)</label>
+                    <select id="cta" name="cta" required>
+                        <option value="LEARN_MORE">Saiba Mais</option>
+                        <option value="SHOP_NOW">Comprar Agora</option>
+                        <option value="SIGN_UP">Cadastre-se</option>
+                    </select>
+                </div>
+                <button type="submit" id="submit-btn">Criar Anúncio</button>
+            </form>
+            <div id="logs-container" class="hidden">
+                <h3>Progresso:</h3>
+                <pre id="logs"></pre>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const PRELOADED_CAMPAIGNS = [
+            {"id":"120230741844490776","name":"215 - Dash - Advantage+"},
+            {"id":"120230297139410776","name":"213 - GPS - Advantage+ - Novos 05-08 - PMI"},
+            {"id":"120226300948180776","name":"206 - [CONVERSÃO] [LSP] DOLAR - Espanhol - Advantage+ Campanha"},
+            {"id":"120218360964160776","name":"200 - [CONVERSÃO] [LSP] DOLAR - Pag Nova - Espanhol Campanha"},
+            {"id":"120213350780150776","name":"195 - [CONVERSÃO] [LSP] DOLAR - Novos - Campanha de Compras Advantage+ Campanha Ingles"},
+            {"id":"120213159568670776","name":"193 - GPS - Advantage+ Campanha"},
+            {"id":"120211316381620776","name":"143 - GPS - [CONVERSÃO] [F] - CBO — 1-10-1 - AD37"}
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const campaignSelect = document.getElementById('campaign-select');
+            PRELOADED_CAMPAIGNS.forEach(campaign => {
+                const option = document.createElement('option');
+                option.value = campaign.id;
+                option.textContent = `${campaign.name} (${campaign.id})`;
+                campaignSelect.appendChild(option);
+            });
+
+            const form = document.getElementById('ad-creator-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const logsContainer = document.getElementById('logs-container');
+            const logsPre = document.getElementById('logs');
+
+            const log = (message) => {
+                logsPre.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+                logsContainer.classList.remove('hidden');
+            };
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                submitBtn.disabled = true;
+                logsPre.textContent = '';
+                log('Iniciando criação do anúncio...');
+                
+                const formData = new FormData(form);
+                
+                try {
+                    log('Enviando dados para o servidor...');
+                    const response = await fetch('http://localhost:3000/api/create-ad', {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Erro desconhecido.');
+                    
+                    log('----- SUCESSO -----');
+                    log(`Anúncio criado com ID: ${result.adId}`);
+                    form.reset();
+                } catch (error) {
+                    log('----- ERRO -----');
+                    log(error.message);
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
