@@ -3,74 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criador de Anúncios Dinâmico</title>
+    <title>Relatório de Investimentos - Contas de Anúncio</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="creator.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Criador de Anúncios Dinâmico</h1>
-            <p>Selecione a conta, campanha e suba seu criativo.</p>
+            <h1>Relatório de Investimentos</h1>
+            <p>Dados de todas as contas de anúncio da Business Manager</p>
         </header>
-        <main>
-            <form id="ad-creator-form">
-                <div class="form-step" style="display: none;">
-                    <input type="hidden" id="account-id" name="accountId" value="348456320153271">
-                </div>
-
-                <div class="form-step">
-                    <h2>Conta: Lidere Seu Projeto</h2>
-                    <label for="campaign-select">2. Selecione a Campanha</label>
-                    <select id="campaign-select" name="campaignId" required disabled>
-                        <option value="">Selecione uma conta primeiro</option>
-                    </select>
-                </div>
-
-                <div class="form-step">
-                    <label for="ad-name">3. Nome do Anúncio</label>
-                    <input type="text" id="ad-name" name="adName" required placeholder="Ex: Anúncio Teste Imagem 01">
-                </div>
-
-                <div class="form-step">
-                    <label for="creative-file">4. Crivo (Imagem ou Vídeo)</label>
-                    <input type="file" id="creative-file" name="creativeFile" required accept="image/*,video/*">
-                </div>
-                
-                <div class="form-step">
-                    <label for="headline">5. Título (Headline)</label>
-                    <input type="text" id="headline" name="headline" placeholder="Opcional">
-                </div>
-
-                <div class="form-step">
-                    <label for="primary-text">6. Texto Principal</label>
-                    <textarea id="primary-text" name="primaryText" rows="3" placeholder="Opcional"></textarea>
-                </div>
-
-                <div class="form-step">
-                    <label for="url">7. URL de Destino</label>
-                    <input type="url" id="url" name="url" required placeholder="https://...">
-                </div>
-
-                <div class="form-step">
-                    <label for="cta">8. Call to Action (CTA)</label>
-                    <select id="cta" name="cta" required>
-                        <option value="LEARN_MORE">Saiba Mais</option>
-                        <option value="SHOP_NOW">Comprar Agora</option>
-                        <option value="SIGN_UP">Cadastre-se</option>
-                        <option value="BOOK_TRAVEL">Reservar Agora</option>
-                        <option value="CONTACT_US">Fale Conosco</option>
-                    </select>
-                </div>
-
-                <button type="submit" id="submit-btn">Criar Anúncio</button>
-            </form>
-            <div id="logs-container" class="hidden">
-                <h3>Progresso:</h3>
-                <pre id="logs"></pre>
+        <main id="report-container">
+            <div id="loader" class="loader">
+                <p>Carregando dados... Isso pode levar alguns minutos.</p>
+                <div class="spinner"></div>
             </div>
+            <table id="report-table" class="hidden">
+                <thead>
+                    <!-- Cabeçalhos serão gerados dinamicamente -->
+                </thead>
+                <tbody>
+                    <!-- Dados serão inseridos aqui -->
+                </tbody>
+                <tfoot>
+                    <!-- Totais serão inseridos aqui -->
+                </tfoot>
+            </table>
         </main>
+        <footer>
+            <p>Última atualização: <span id="last-updated">Nunca</span></p>
+            <button id="refresh-btn">Atualizar Dados</button>
+        </footer>
     </div>
-    <script src="creator.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
